@@ -27,6 +27,7 @@ public interface DirectionService {
     @GET("/json")
     void getMatrixDirection(@Query("origins") String from,
                       @Query("destinations") String to,
+                      @Query("mode") String mode,
                       @Query("key") String key,
                       @Query("sensor") Boolean sensor,
                       @Query("language") String language,

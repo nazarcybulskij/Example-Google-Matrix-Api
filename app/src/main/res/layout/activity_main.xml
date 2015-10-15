@@ -44,6 +44,34 @@
         app:layout_gravity="fill_horizontal"
         android:text="load_directions" />
 
+    <RadioGroup
+        android:id="@+id/radiogroup"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <RadioButton android:id="@+id/radio_driving"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="driving"
+            android:checked="true"
+            android:onClick="onRadioButtonClicked"/>
+        <RadioButton android:id="@+id/radio_walking"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="walking"
+            android:onClick="onRadioButtonClicked"/>
+        <RadioButton android:id="@+id/radio_bicycling"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="bicycling"
+            android:onClick="onRadioButtonClicked"/>
+        <RadioButton android:id="@+id/radio_transit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="transit"
+            android:onClick="onRadioButtonClicked"/>
+    </RadioGroup>
+
 
     <TextView
         android:id="@+id/json"

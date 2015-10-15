@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,7 +24,7 @@ import retrofit.RetrofitError;
 import retrofit.client.Response;
 import retrofit.mime.TypedByteArray;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity  implements View.OnClickListener {
 
 
     AutoCompleteTextView from;
@@ -32,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     TextView mJsonTextView;
 
     DirectionService service;
+    String mode = "driving";
 
     private static final LatLngBounds BOUNDS_GREATER_MOSCOW = new LatLngBounds(
             new LatLng(55.151244, 37.018423), new LatLng(56.551244, 38.318423));
@@ -49,6 +51,37 @@ public class MainActivity extends AppCompatActivity {
         from = (AutoCompleteTextView) findViewById(R.id.from);
         to = (AutoCompleteTextView) findViewById(R.id.to);
         mJsonTextView = (TextView)findViewById(R.id.json);
+
+        findViewById(R.id.radio_driving).setOnClickListener(this);
+        findViewById(R.id.radio_walking).setOnClickListener(this);
+        findViewById(R.id.radio_bicycling).setOnClickListener(this);
+        findViewById(R.id.radio_transit).setOnClickListener(this);
+
+
+//        rGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener()
+//        {
+//            public void onCheckedChanged(RadioGroup rGroup, int checkedId)
+//            {
+//
+//                switch (checkedId){
+//                    case R.id.radio_driving:
+//                        mode = "driving";
+//                        break;
+//                    case R.id.radio_walking:
+//                        mode = "walking";
+//                        break;
+//                    case R.id.radio_bicycling:
+//                        mode = "bicycling";
+//                        break;
+//                    case R.id.radio_transit:
+//                        mode = "transit";
+//                        break;
+//                }
+//            }
+//        });
+
+
+
 
         
         from.setAdapter(new AutoCompleteEventLocationAdapter(this, BOUNDS_GREATER_MOSCOW));
@@ -84,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
 //                    }
 //                });
 
-                service.getMatrixDirection(fromstr, tostr, getResources().getString(R.string.SERVER_API_KEY), false,"ru", new Callback<Response>() {
+                service.getMatrixDirection(fromstr, tostr,mode, getResources().getString(R.string.SERVER_API_KEY), false,"ru", new Callback<Response>() {
                     @Override
                     public void success(Response response, Response response2) {
                         try {
@@ -151,4 +184,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    @Override
+    public void onClick(View v) {
+        int checkedId = v.getId();
+
+        switch (checkedId){
+            case R.id.radio_driving:
+                mode = "driving";
+                break;
+            case R.id.radio_walking:
+                mode = "walking";
+                break;
+            case R.id.radio_bicycling:
+                mode = "bicycling";
+                break;
+            case R.id.radio_transit:
+                mode = "transit";
+                break;
+        }
+        mJsonTextView.setText("");
+
+    }
 }
