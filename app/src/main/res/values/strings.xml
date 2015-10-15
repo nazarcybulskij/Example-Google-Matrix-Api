@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">TestDirection</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="API_KEY">AIzaSyAHpZcr0jcRA16r2Nd-rhdjZKbVS-yCusg</string>
+    <string name="SERVER_API_KEY">AIzaSyAIcxGWzrKDzEkgsVoSI0BiXQPfIQZJ9Jc</string>
+    <string name="direction_url">https://maps.googleapis.com/maps/api/directions</string>
+    <string name="direction_matrix_url">https://maps.googleapis.com/maps/api/distancematrix</string>
+</resources>
