@@ -150,6 +150,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                             String jsonOutput = steps.toString();
                             Type listType = new TypeToken<List<Step>>(){}.getType();
                             stepslist = (ArrayList<Step>) gson.fromJson(jsonOutput, listType);
+                            printLine();
 
 
 
