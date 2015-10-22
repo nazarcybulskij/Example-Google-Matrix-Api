@@ -1,5 +1,7 @@
 package nazar.cybulskij.testdirection;
 
+import android.location.Address;
+import android.location.Geocoder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,11 +21,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import nazar.cybulskij.testdirection.adapter.AutoCompleteEventLocationAdapter;
+import nazar.cybulskij.testdirection.model.Location;
 import nazar.cybulskij.testdirection.model.Step;
 import nazar.cybulskij.testdirection.network.DirectionService;
 import nazar.cybulskij.testdirection.network.ServiceGenerator;
@@ -69,6 +74,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         findViewById(R.id.radio_walking).setOnClickListener(this);
         findViewById(R.id.radio_bicycling).setOnClickListener(this);
         findViewById(R.id.radio_transit).setOnClickListener(this);
+
 
 
 //        rGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener()
@@ -236,11 +242,83 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     private  void printLine(){
         for (Step temp:stepslist){
             if(temp.getTravel_mode().equals("TRANSIT")){
-                mLine.setText(mLine.getText()+"\n"+temp.getDetail().getLine().getName()+
-                        "--"+temp.getDetail().getLine().getShort_name()+
-                        "--"+temp.getDetail().getLine().getVehicle().getType());
-
+                printTransit(temp);
             }
+
+            if(temp.getTravel_mode().equals("WALKING")){
+                printWalking(temp);
+            }
+
+            mLine.setText(mLine.getText()+"\n");
         }
     }
+
+    private  void printWalking(Step step){
+        mLine.setText(mLine.getText()+"\n" + "Start = "+getAdress(step.getStart_location()));
+
+        mLine.setText(mLine.getText()+"\n" + " Duration = "+step.getDuration().getText());
+        mLine.setText(mLine.getText()+"\n" + " Distance = "+step.getDistance().getText());
+        mLine.setText(mLine.getText()+"\n" + " Type = "+step.getTravel_mode().toLowerCase());
+
+        mLine.setText(mLine.getText() + "\n" + " End = " + getAdress(step.getEnd_location()));
+
+    }
+
+    private  void printTransit(Step step){
+
+        mLine.setText(mLine.getText()+"\n" + "Start = "+getAdress(step.getStart_location()));
+
+        mLine.setText(mLine.getText()+"\n" + " Duration = "+step.getDuration().getText());
+        mLine.setText(mLine.getText()+"\n" + " Distance = "+step.getDistance().getText());
+        mLine.setText(mLine.getText()+"\n" + " Type = "+step.getTravel_mode().toLowerCase());
+
+
+        mLine.setText(mLine.getText()+"\n" + " Start = "+step.getDetail().getDeparture_stop().getName());
+        mLine.setText(mLine.getText()+"\n" + " Маршрут = "+step.getDetail().getLine().getName()+" "+step.getDetail().getLine().getVehicle().getType());
+        mLine.setText(mLine.getText()+"\n" + "№  = "+step.getDetail().getLine().getShort_name());
+
+        mLine.setText(mLine.getText()+"\n" + " Зупинок = "+step.getDetail().getNum_stops());
+        mLine.setText(mLine.getText()+"\n" + " End = "+step.getDetail().getArrival_stop().getName());
+
+
+
+        mLine.setText(mLine.getText() + "\n" + " End = " + getAdress(step.getEnd_location()));
+
+
+
+    }
+
+
+
+
+    private  String getAdress(Location location){
+
+        Geocoder geocoder;
+        geocoder = new Geocoder(this);
+
+
+        List<Address> addresses = null;
+        try {
+            addresses = geocoder.getFromLocation(
+                    location.getLat(),
+                    location.getLng(),
+                    1);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (addresses!=null){
+            if (addresses.size()!=0){
+                Address address = addresses.get(0);
+                String result = address.getAddressLine(0) + ", " + address.getLocality();
+                return result;
+            }
+        }
+
+        return "";
+
+
+    }
+
+
 }
