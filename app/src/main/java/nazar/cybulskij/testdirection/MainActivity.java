@@ -136,7 +136,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
 //                    }
 //                });
 
-                service.getDirection(fromstr, tostr, mode, getResources().getString(R.string.SERVER_API_KEY), false, "ru", new Callback<Response>() {
+                service.getDirection(fromstr, tostr, mode, getResources().getString(R.string.SERVER_API_KEY), false, "ru", true,new Callback<Response>() {
                     @Override
                     public void success(Response response, Response response2) {
                         try {
@@ -144,19 +144,37 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                             JSONObject object = new JSONObject(new String(((TypedByteArray) response.getBody()).getBytes()));
                             String json = formatString(object.toString());
 
+                            Type listType = new TypeToken<List<Step>>(){}.getType();
+
 
 
                             JSONArray results = object.optJSONArray("routes");
-                            JSONObject route = results.optJSONObject(0);
-                            JSONArray legs = route.optJSONArray("legs");
-                            JSONObject leg = legs.optJSONObject(0);
-                            JSONArray steps = leg.optJSONArray("steps");
-
+                            JSONObject route;
+                            JSONArray legs;
+                            JSONObject leg ;
+                            JSONArray steps ;
                             Gson gson = new Gson();
-                            String jsonOutput = steps.toString();
-                            Type listType = new TypeToken<List<Step>>(){}.getType();
-                            stepslist = (ArrayList<Step>) gson.fromJson(jsonOutput, listType);
-                            printLine();
+
+                            for (int i =0;i<results.length();i++){
+                                 route = results.optJSONObject(i);
+                                 legs = route.optJSONArray("legs");
+                                 leg = legs.optJSONObject(0);
+                                 steps = leg.optJSONArray("steps");
+                                 String jsonOutput = steps.toString();
+                                 stepslist = (ArrayList<Step>) gson.fromJson(jsonOutput, listType);
+                                 printLine();
+
+
+                                 mLine.setText(mLine.getText()+"/-----------------------------------------------/"+"\n");
+
+
+
+                            }
+
+
+
+
+
 
 
 
