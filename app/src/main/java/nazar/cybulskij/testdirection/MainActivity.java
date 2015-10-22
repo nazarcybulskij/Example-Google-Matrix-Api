@@ -12,11 +12,19 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
+
 import nazar.cybulskij.testdirection.adapter.AutoCompleteEventLocationAdapter;
+import nazar.cybulskij.testdirection.model.Step;
 import nazar.cybulskij.testdirection.network.DirectionService;
 import nazar.cybulskij.testdirection.network.ServiceGenerator;
 import retrofit.Callback;
@@ -32,8 +40,12 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     Button mLoadDirections;
     TextView mJsonTextView;
 
+    TextView mLine;
+
     DirectionService service;
     String mode = "driving";
+
+    ArrayList<Step> stepslist = new ArrayList<Step>();
 
     private static final LatLngBounds BOUNDS_GREATER_MOSCOW = new LatLngBounds(
             new LatLng(55.151244, 37.018423), new LatLng(56.551244, 38.318423));
@@ -51,6 +63,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         from = (AutoCompleteTextView) findViewById(R.id.from);
         to = (AutoCompleteTextView) findViewById(R.id.to);
         mJsonTextView = (TextView)findViewById(R.id.json);
+        mLine = (TextView)findViewById(R.id.line);
 
         findViewById(R.id.radio_driving).setOnClickListener(this);
         findViewById(R.id.radio_walking).setOnClickListener(this);
@@ -87,7 +100,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         from.setAdapter(new AutoCompleteEventLocationAdapter(this, BOUNDS_GREATER_MOSCOW));
         to.setAdapter(new AutoCompleteEventLocationAdapter(this, BOUNDS_GREATER_MOSCOW));
         mLoadDirections = (Button)findViewById(R.id.load_directions);
-        service = ServiceGenerator.createService(DirectionService.class, getResources().getString(R.string.direction_matrix_url));
+        service = ServiceGenerator.createService(DirectionService.class, getResources().getString(R.string.direction_url));
 
         mLoadDirections.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -117,16 +130,33 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
 //                    }
 //                });
 
-                service.getMatrixDirection(fromstr, tostr,mode, getResources().getString(R.string.SERVER_API_KEY), false,"ru", new Callback<Response>() {
+                service.getDirection(fromstr, tostr, mode, getResources().getString(R.string.SERVER_API_KEY), false, "ru", new Callback<Response>() {
                     @Override
                     public void success(Response response, Response response2) {
                         try {
+
                             JSONObject object = new JSONObject(new String(((TypedByteArray) response.getBody()).getBytes()));
                             String json = formatString(object.toString());
-                            //Toast.makeText(MainActivity.this,json,Toast.LENGTH_LONG).show();
+
+
+
+                            JSONArray results = object.optJSONArray("routes");
+                            JSONObject route = results.optJSONObject(0);
+                            JSONArray legs = route.optJSONArray("legs");
+                            JSONObject leg = legs.optJSONObject(0);
+                            JSONArray steps = leg.optJSONArray("steps");
+
+                            Gson gson = new Gson();
+                            String jsonOutput = steps.toString();
+                            Type listType = new TypeToken<List<Step>>(){}.getType();
+                            stepslist = (ArrayList<Step>) gson.fromJson(jsonOutput, listType);
+
+
+
+
+
                             mJsonTextView.setText(json);
 
-                            Log.v("TAG",object.toString());
 
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -139,10 +169,6 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
 
                     }
                 });
-
-
-
-
 
 
             }
@@ -204,5 +230,16 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         }
         mJsonTextView.setText("");
 
+    }
+
+    private  void printLine(){
+        for (Step temp:stepslist){
+            if(temp.getTravel_mode().equals("TRANSIT")){
+                mLine.setText(mLine.getText()+"\n"+temp.getDetail().getLine().getName()+
+                        "--"+temp.getDetail().getLine().getShort_name()+
+                        "--"+temp.getDetail().getLine().getVehicle().getType());
+
+            }
+        }
     }
 }

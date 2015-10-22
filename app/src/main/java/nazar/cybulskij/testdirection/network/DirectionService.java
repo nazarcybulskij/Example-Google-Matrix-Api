@@ -17,6 +17,7 @@ public interface DirectionService {
     @GET("/json")
     void getDirection(@Query("origin") String from,
                       @Query("destination") String to,
+                      @Query("mode") String mode,
                       @Query("key") String key,
                       @Query("sensor") Boolean sensor,
                       @Query("language") String language,
