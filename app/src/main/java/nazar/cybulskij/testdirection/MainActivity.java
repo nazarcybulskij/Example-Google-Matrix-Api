@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     TextView mLine;
 
     DirectionService service;
-    String mode = "driving";
+    String mode = "transit";
 
     ArrayList<Step> stepslist = new ArrayList<Step>();
 

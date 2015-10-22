@@ -7,7 +7,10 @@ import com.google.gson.annotations.SerializedName;
  */
 public class Vehicle {
 
-
+    @SerializedName("name")
+    String name;
+    @SerializedName("icon")
+    String icon;
     @SerializedName("type")
     String type;
 
@@ -17,5 +20,21 @@ public class Vehicle {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getIcon() {
+        return icon;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }
