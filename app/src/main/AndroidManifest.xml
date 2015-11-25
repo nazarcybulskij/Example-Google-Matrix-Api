@@ -26,13 +26,19 @@
             </intent-filter>
         </activity>
 
+
+        <!--<meta-data-->
+            <!--android:name="com.google.android.maps.v2.API_KEY"-->
+            <!--android:value="@string/SERVER_API_KEY">-->
+        <!--</meta-data>-->
+
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="@string/API_KEY" />
 
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="@string/SERVER_API_KEY"/>
+        <!--<meta-data-->
+            <!--android:name="com.google.android.geo.API_KEY"-->
+            <!--android:value="@string/API_KEY"/>-->
 
 
 

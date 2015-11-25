@@ -25,6 +25,8 @@ public class Step {
     String travel_mode;
     @SerializedName("steps")
     ArrayList<Step> steps;
+    @SerializedName("polyline")
+    Polyline polyline;
 
 
 
@@ -91,5 +93,14 @@ public class Step {
 
     public void setSteps(ArrayList<Step> steps) {
         this.steps = steps;
+    }
+
+
+    public Polyline getPolyline() {
+        return polyline;
+    }
+
+    public void setPolyline(Polyline polyline) {
+        this.polyline = polyline;
     }
 }

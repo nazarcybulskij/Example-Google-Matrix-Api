@@ -1,7 +1,9 @@
 package nazar.cybulskij.testdirection;
 
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
+import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,10 +14,21 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.MapsInitializer;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.google.maps.android.PolyUtil;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -37,16 +50,17 @@ import retrofit.RetrofitError;
 import retrofit.client.Response;
 import retrofit.mime.TypedByteArray;
 
-public class MainActivity extends AppCompatActivity  implements View.OnClickListener {
+public class MainActivity extends FragmentActivity implements View.OnClickListener {
 
 
     AutoCompleteTextView from;
     AutoCompleteTextView to;
     Button mLoadDirections;
+    SupportMapFragment mapFragment;
+    GoogleMap map;
     TextView mJsonTextView;
 
     TextView mLine;
-
     DirectionService service;
     String mode = "transit";
 
@@ -74,6 +88,16 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         findViewById(R.id.radio_walking).setOnClickListener(this);
         findViewById(R.id.radio_bicycling).setOnClickListener(this);
         findViewById(R.id.radio_transit).setOnClickListener(this);
+
+        mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        map = mapFragment.getMap();
+        if (map == null) {
+            finish();
+            return;
+        }
+
+
 
 
 
@@ -154,6 +178,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                             JSONObject leg ;
                             JSONArray steps ;
                             Gson gson = new Gson();
+                            ArrayList<ArrayList<Step>> allRoutes=new ArrayList<ArrayList<Step>>();
 
                             for (int i =0;i<results.length();i++){
                                  route = results.optJSONObject(i);
@@ -162,22 +187,22 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                                  steps = leg.optJSONArray("steps");
                                  String jsonOutput = steps.toString();
                                  stepslist = (ArrayList<Step>) gson.fromJson(jsonOutput, listType);
+//                                 for (Step tempstep:stepslist){
+//                                     mLine.setText(mLine.getText()+tempstep.getPolyline().getPoints()+"\n" );
+//
+//                                 }
+                                allRoutes.add(stepslist);
+
                                  printLine();
-
-
-                                 mLine.setText(mLine.getText()+"/-----------------------------------------------/"+"\n");
-
-
+                                 mLine.setText(mLine.getText()+"/---------------------------------------------/"+"\n");
 
                             }
 
-
-
-
-
-
-
-
+                            if (allRoutes.size()>0) {
+                                onDrawRoutes(allRoutes.get(0));
+                                //onDrawRoute(allRoutes.get(0).get(0));
+                                //onDrawRoute(allRoutes.get(0).get(1));
+                            }
 
 
                             mJsonTextView.setText(json);
@@ -200,6 +225,41 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         });
 
     }
+
+    public void onDrawRoutes(ArrayList<Step> steps){
+        for (Step tempstep:steps){
+            onDrawRoute(tempstep);
+        }
+    }
+
+    public void onDrawRoute(Step step){
+        List<LatLng> mPoints = PolyUtil.decode(step.getPolyline().getPoints());
+        PolylineOptions line = new PolylineOptions()
+                .color(Color.BLUE)
+                .width(5)
+                .visible(true)
+                .zIndex(30);
+
+
+        LatLngBounds.Builder latLngBuilder = new LatLngBounds.Builder();
+        for (int i = 0; i < mPoints.size(); i++) {
+            if (i == 0) {
+                MarkerOptions startMarkerOptions = new MarkerOptions().position(mPoints.get(i));
+                map.addMarker(startMarkerOptions);
+            } else if (i == mPoints.size() - 1) {
+                MarkerOptions endMarkerOptions = new MarkerOptions().position(mPoints.get(i));
+                map.addMarker(endMarkerOptions);
+            }
+            line.add(mPoints.get(i));
+            latLngBuilder.include(mPoints.get(i));
+        }
+        map.addPolyline(line);
+        int size = getResources().getDisplayMetrics().widthPixels;
+        LatLngBounds latLngBounds = latLngBuilder.build();
+        CameraUpdate track = CameraUpdateFactory.newLatLngBounds(latLngBounds, size, size, 25);
+        map.moveCamera(track);
+    }
+
 
 
     public static String formatString(String text){
@@ -253,7 +313,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                 mode = "transit";
                 break;
         }
-        mJsonTextView.setText("");
+       // mJsonTextView.setText("");
 
     }
 
@@ -273,11 +333,9 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
 
     private  void printWalking(Step step){
         mLine.setText(mLine.getText()+"\n" + "Start = "+getAdress(step.getStart_location()));
-
         mLine.setText(mLine.getText()+"\n" + " Duration = "+step.getDuration().getText());
         mLine.setText(mLine.getText()+"\n" + " Distance = "+step.getDistance().getText());
         mLine.setText(mLine.getText()+"\n" + " Type = "+step.getTravel_mode().toLowerCase());
-
         mLine.setText(mLine.getText() + "\n" + " End = " + getAdress(step.getEnd_location()));
 
     }
@@ -285,7 +343,6 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     private  void printTransit(Step step){
 
         mLine.setText(mLine.getText()+"\n" + "Start = "+getAdress(step.getStart_location()));
-
         mLine.setText(mLine.getText()+"\n" + " Duration = "+step.getDuration().getText());
         mLine.setText(mLine.getText()+"\n" + " Distance = "+step.getDistance().getText());
         mLine.setText(mLine.getText()+"\n" + " Type = "+step.getTravel_mode().toLowerCase());
