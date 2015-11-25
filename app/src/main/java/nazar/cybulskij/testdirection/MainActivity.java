@@ -36,15 +36,19 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 import nazar.cybulskij.testdirection.adapter.AutoCompleteEventLocationAdapter;
 import nazar.cybulskij.testdirection.model.Location;
+import nazar.cybulskij.testdirection.model.Polyline;
 import nazar.cybulskij.testdirection.model.Step;
 import nazar.cybulskij.testdirection.network.DirectionService;
 import nazar.cybulskij.testdirection.network.ServiceGenerator;
+import nazar.cybulskij.testdirection.util.DistanceUtil;
 import retrofit.Callback;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
@@ -96,6 +100,8 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
             finish();
             return;
         }
+
+
 
 
 
@@ -193,10 +199,11 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 //                                 }
                                 allRoutes.add(stepslist);
 
-                                 printLine();
-                                 mLine.setText(mLine.getText()+"/---------------------------------------------/"+"\n");
+//                                 printLine();
+//                                 mLine.setText(mLine.getText()+"/---------------------------------------------/"+"\n");
 
                             }
+                            map.clear();
 
                             if (allRoutes.size()>0) {
                                 onDrawRoutes(allRoutes.get(0));
@@ -205,7 +212,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                             }
 
 
-                            mJsonTextView.setText(json);
+                           // mJsonTextView.setText(json);
 
 
                         } catch (JSONException e) {
@@ -228,17 +235,45 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     public void onDrawRoutes(ArrayList<Step> steps){
         for (Step tempstep:steps){
-            onDrawRoute(tempstep);
+            if (tempstep.getTravel_mode().equals("WALKING")){
+                drawDashedPolyLine(map,PolyUtil.decode(tempstep.getPolyline().getPoints()),Color.BLUE);
+
+            }else{
+                onDrawRoute(tempstep);
+
+            }
+
+
+
+
+
+
+
+
         }
     }
 
     public void onDrawRoute(Step step){
         List<LatLng> mPoints = PolyUtil.decode(step.getPolyline().getPoints());
-        PolylineOptions line = new PolylineOptions()
-                .color(Color.BLUE)
-                .width(5)
-                .visible(true)
-                .zIndex(30);
+
+
+        PolylineOptions line;
+
+//        if (step.getTravel_mode().equals("WALKING")){
+//            line = new PolylineOptions()
+//                    .color(Color.RED)
+//                    .width(5)
+//                    .visible(true)
+//                    .zIndex(30);
+//
+//        }else{
+             line = new PolylineOptions()
+                    .color(Color.BLUE)
+                    .width(5)
+                    .visible(true)
+                    .zIndex(30);
+
+ //       }
 
 
         LatLngBounds.Builder latLngBuilder = new LatLngBounds.Builder();
@@ -394,6 +429,66 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
 
     }
+
+    private void drawDashedPolyLine(GoogleMap mMap, List<LatLng> listOfPoints, int color) {
+    /* Boolean to control drawing alternate lines */
+        boolean added = false;
+        for (int i = 0; i < listOfPoints.size() - 1 ; i++) {
+        /* Get distance between current and next point */
+            double distance = getConvertedDistance(listOfPoints.get(i),listOfPoints.get(i + 1));
+
+        /* If distance is less than 0.002 kms */
+            if (distance < 0.002) {
+                if (!added) {
+                    mMap.addPolyline(new PolylineOptions()
+                            .add(listOfPoints.get(i))
+                            .add(listOfPoints.get(i + 1))
+                            .color(color));
+                    added = true;
+                } else {/* Skip this piece */
+                    added = false;
+                }
+            } else {
+            /* Get how many divisions to make of this line */
+                int countOfDivisions = (int) ((distance/0.002));
+
+            /* Get difference to add per lat/lng */
+                double latdiff = (listOfPoints.get(i+1).latitude - listOfPoints
+                        .get(i).latitude) / countOfDivisions;
+                double lngdiff = (listOfPoints.get(i + 1).longitude - listOfPoints
+                        .get(i).longitude) / countOfDivisions;
+
+            /* Last known indicates start point of polyline. Initialized to ith point */
+                LatLng lastKnowLatLng = new LatLng(listOfPoints.get(i).latitude, listOfPoints.get(i).longitude);
+                for (int j = 0; j < countOfDivisions; j++) {
+
+                /* Next point is point + diff */
+                    LatLng nextLatLng = new LatLng(lastKnowLatLng.latitude + latdiff, lastKnowLatLng.longitude + lngdiff);
+                    if (!added) {
+                        mMap.addPolyline(new PolylineOptions()
+                                .add(lastKnowLatLng)
+                                .add(nextLatLng)
+                                .color(color));
+                        added = true;
+                    } else {
+                        added = false;
+                    }
+                    lastKnowLatLng = nextLatLng;
+                }
+            }
+        }
+    }
+
+    private double getConvertedDistance(LatLng latlng1, LatLng latlng2) {
+        double distance = DistanceUtil.distance(latlng1.latitude,
+                latlng1.longitude,
+                latlng2.latitude,
+                latlng2.longitude);
+        BigDecimal bd = new BigDecimal(distance);
+        BigDecimal res = bd.setScale(3, RoundingMode.DOWN);
+        return res.doubleValue();
+    }
+
 
 
 }
