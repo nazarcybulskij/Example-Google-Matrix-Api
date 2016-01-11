@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 23
     buildToolsVersion "23.0.1"
-    useLibrary  'org.apache.http.legacy'
+    //useLibrary  'org.apache.http.legacy'
 
     defaultConfig {
         applicationId "nazar.cybulskij.testdirection"
@@ -34,6 +34,6 @@ dependencies {
     compile 'com.jakewharton:butterknife:6.1.0'
     compile 'com.google.apis:google-api-services-coordinate:v1-rev53-1.20.0'
     compile 'com.google.maps.android:android-maps-utils:0.3+'
-    compile 'org.apache.httpcomponents:httpclient:4.2.2'
+    //compile 'org.apache.httpcomponents:httpclient:4.2.2'
 
 }

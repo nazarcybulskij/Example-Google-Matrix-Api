@@ -6,6 +6,7 @@ import android.location.Geocoder;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Html;
 import android.util.Log;
 import android.view.View;
 import android.widget.AutoCompleteTextView;
@@ -66,7 +67,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     TextView mLine;
     DirectionService service;
-    String mode = "transit";
+    String mode = "driving";
 
     ArrayList<Step> stepslist = new ArrayList<Step>();
 
@@ -99,6 +100,17 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         if (map == null) {
             finish();
             return;
+        }
+
+        map.setMyLocationEnabled(true);
+        // Check if we were successful in obtaining the map.
+        if (map != null) {
+            map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
+                @Override
+                public void onMyLocationChange(android.location.Location location) {
+                    map.setTrafficEnabled(true);
+                }
+            });
         }
 
 
@@ -211,8 +223,12 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                                 //onDrawRoute(allRoutes.get(0).get(1));
                             }
 
+                            showRoute();
+
 
                            // mJsonTextView.setText(json);
+
+
 
 
                         } catch (JSONException e) {
@@ -235,20 +251,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     public void onDrawRoutes(ArrayList<Step> steps){
         for (Step tempstep:steps){
-            if (tempstep.getTravel_mode().equals("WALKING")){
-                drawDashedPolyLine(map,PolyUtil.decode(tempstep.getPolyline().getPoints()),Color.BLUE);
-
-            }else{
                 onDrawRoute(tempstep);
-
-            }
-
-
-
-
-
-
-
 
         }
     }
@@ -278,6 +281,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
         LatLngBounds.Builder latLngBuilder = new LatLngBounds.Builder();
         for (int i = 0; i < mPoints.size(); i++) {
+
             if (i == 0) {
                 MarkerOptions startMarkerOptions = new MarkerOptions().position(mPoints.get(i));
                 map.addMarker(startMarkerOptions);
@@ -285,6 +289,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                 MarkerOptions endMarkerOptions = new MarkerOptions().position(mPoints.get(i));
                 map.addMarker(endMarkerOptions);
             }
+
             line.add(mPoints.get(i));
             latLngBuilder.include(mPoints.get(i));
         }
@@ -352,6 +357,39 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     }
 
+    private  void showRoute(){
+        for (Step temp:stepslist){
+//            if(temp.getTravel_mode().equals("TRANSIT")){
+//                showTransit(temp);
+//            }
+//
+//            if(temp.getTravel_mode().equals("WALKING")){
+//                showWalking(temp);
+//            }
+            showDriver(temp);
+        }
+    }
+
+    private  void showWalking(Step step){
+        Toast.makeText(getApplicationContext(),step.getDuration().getText()+":"+step.getDistance().getText()+"\n"+
+                Html.fromHtml(step.getHtml_instructions()),Toast.LENGTH_SHORT).show();
+    }
+    private  void showDriver(Step step){
+        Toast.makeText(getApplicationContext(), step.getDuration().getText() + ":" + step.getDistance().getText() +"\n"+
+                Html.fromHtml(step.getHtml_instructions()), Toast.LENGTH_SHORT).show();
+    }
+
+
+
+    private  void showTransit(Step step){
+        Toast.makeText(getApplicationContext(),step.getDuration().getText()+":"+step.getDistance().getText(),Toast.LENGTH_SHORT).show();
+    }
+
+
+
+
+
+
     private  void printLine(){
         for (Step temp:stepslist){
             if(temp.getTravel_mode().equals("TRANSIT")){
@@ -372,6 +410,11 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         mLine.setText(mLine.getText()+"\n" + " Distance = "+step.getDistance().getText());
         mLine.setText(mLine.getText()+"\n" + " Type = "+step.getTravel_mode().toLowerCase());
         mLine.setText(mLine.getText() + "\n" + " End = " + getAdress(step.getEnd_location()));
+
+        Toast.makeText(getApplicationContext(),step.getDuration().getText()+":"+step.getDistance().getText(),Toast.LENGTH_SHORT).show();
+
+
+
 
     }
 
