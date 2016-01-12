@@ -3,6 +3,9 @@ package nazar.cybulskij.testdirection;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
+import android.os.Handler;
+import android.os.Message;
+import android.speech.tts.TextToSpeech;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -42,6 +45,8 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import nazar.cybulskij.testdirection.adapter.AutoCompleteEventLocationAdapter;
 import nazar.cybulskij.testdirection.model.Location;
@@ -69,11 +74,28 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     DirectionService service;
     String mode = "driving";
 
+    TextToSpeech mTextToSprech;
+
     ArrayList<Step> stepslist = new ArrayList<Step>();
 
     private static final LatLngBounds BOUNDS_GREATER_MOSCOW = new LatLngBounds(
             new LatLng(55.151244, 37.018423), new LatLng(56.551244, 38.318423));
 
+
+    private Handler updater = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            if (stepPosition<stepslist.size()){
+                String spick = Html.fromHtml(stepslist.get(stepPosition).getHtml_instructions()).toString();
+                mTextToSprech.speak(spick,TextToSpeech.QUEUE_FLUSH, null);
+                stepPosition++;
+                updater.sendEmptyMessageDelayed(0,10000);
+            }
+
+        }
+    };
+
+    int   stepPosition = 0;
 
 
 
@@ -93,6 +115,24 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         findViewById(R.id.radio_walking).setOnClickListener(this);
         findViewById(R.id.radio_bicycling).setOnClickListener(this);
         findViewById(R.id.radio_transit).setOnClickListener(this);
+
+        mTextToSprech = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    Locale locale = new Locale("ru");
+                    int result = mTextToSprech.setLanguage(locale);
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        Log.e("TTS", "Извините, этот язык не поддерживается");
+                    } else {
+
+                    }
+
+                } else {
+                    Log.e("TTS", "Ошибка!");
+                }
+            }
+        });
 
         mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -358,7 +398,13 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     }
 
     private  void showRoute(){
+
+        updater.sendEmptyMessageDelayed(0,0);
+
+
+
         for (Step temp:stepslist){
+            String  spick = "This code first acquires a reference to the text-field using its ID value, so alter this if you used a different value in your layout XML. Next, the code gets the text from the field and stores it as a string variable. If the user has not entered any text this will be empty. Depending on the logic within your application you may wish to add a conditional test, checking that the string is not null or zero in length, but this is not generally necessary.";
 //            if(temp.getTravel_mode().equals("TRANSIT")){
 //                showTransit(temp);
 //            }
@@ -367,6 +413,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 //                showWalking(temp);
 //            }
             showDriver(temp);
+
         }
     }
 
