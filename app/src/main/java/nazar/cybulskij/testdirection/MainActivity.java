@@ -1,5 +1,8 @@
 package nazar.cybulskij.testdirection;
 
+import android.app.Dialog;
+import android.app.DialogFragment;
+import android.content.IntentSender;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
@@ -18,7 +21,12 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -49,6 +57,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import nazar.cybulskij.testdirection.adapter.AutoCompleteEventLocationAdapter;
+import nazar.cybulskij.testdirection.listener.OnChangedLocationListener;
 import nazar.cybulskij.testdirection.model.Location;
 import nazar.cybulskij.testdirection.model.Polyline;
 import nazar.cybulskij.testdirection.model.Step;
@@ -60,7 +69,12 @@ import retrofit.RetrofitError;
 import retrofit.client.Response;
 import retrofit.mime.TypedByteArray;
 
-public class MainActivity extends FragmentActivity implements View.OnClickListener {
+public class MainActivity extends FragmentActivity implements View.OnClickListener ,
+                                com.google.android.gms.location.LocationListener,
+                                GoogleApiClient.ConnectionCallbacks,
+                                GoogleApiClient.OnConnectionFailedListener {
+
+    private static final String TAG = MainActivity.class.getName();
 
 
     AutoCompleteTextView from;
@@ -80,6 +94,24 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     private static final LatLngBounds BOUNDS_GREATER_MOSCOW = new LatLngBounds(
             new LatLng(55.151244, 37.018423), new LatLng(56.551244, 38.318423));
+
+
+
+    private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
+    private LocationRequest locationRequest;
+    private GoogleApiClient locationClient;
+    private static final int MILLISECONDS_PER_SECOND = 1000;
+    private static final int UPDATE_INTERVAL_IN_SECONDS = 5;
+    private static final int FAST_CEILING_IN_SECONDS = 1;
+    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = MILLISECONDS_PER_SECOND
+            * UPDATE_INTERVAL_IN_SECONDS;
+    private static final long FAST_INTERVAL_CEILING_IN_MILLISECONDS = MILLISECONDS_PER_SECOND
+            * FAST_CEILING_IN_SECONDS;
+
+    private android.location.Location lastLocation;
+    private android.location.Location currentLocation;
+
+    private boolean hasSetUpInitialLocation;
 
 
     private Handler updater = new Handler() {
@@ -153,38 +185,21 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
             });
         }
 
+        locationRequest = LocationRequest.create();
+        locationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setFastestInterval(FAST_INTERVAL_CEILING_IN_MILLISECONDS);
+        locationClient = new GoogleApiClient.Builder(this)
+                .addApi(LocationServices.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
 
 
 
 
 
 
-//        rGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener()
-//        {
-//            public void onCheckedChanged(RadioGroup rGroup, int checkedId)
-//            {
-//
-//                switch (checkedId){
-//                    case R.id.radio_driving:
-//                        mode = "driving";
-//                        break;
-//                    case R.id.radio_walking:
-//                        mode = "walking";
-//                        break;
-//                    case R.id.radio_bicycling:
-//                        mode = "bicycling";
-//                        break;
-//                    case R.id.radio_transit:
-//                        mode = "transit";
-//                        break;
-//                }
-//            }
-//        });
-
-
-
-
-        
         from.setAdapter(new AutoCompleteEventLocationAdapter(this, BOUNDS_GREATER_MOSCOW));
         to.setAdapter(new AutoCompleteEventLocationAdapter(this, BOUNDS_GREATER_MOSCOW));
         mLoadDirections = (Button)findViewById(R.id.load_directions);
@@ -195,29 +210,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
             public void onClick(View v) {
                 String tostr =to.getText().toString();
                 String fromstr =from.getText().toString();
-
-//                service.getDirection(fromstr, tostr, getResources().getString(R.string.SERVER_API_KEY), false,"ru", new Callback<Response>() {
-//                    @Override
-//                    public void success(Response responsemi, Response response2) {
-//                        try {
-//                            JSONObject object = new JSONObject(new String(((TypedByteArray) response.getBody()).getBytes()));
-//                            String json = formatString(object.toString());
-//                            mJsonTextView.setText(json);
-//
-//                            Log.v("TAG",object.toString());
-//
-//                        } catch (JSONException e) {
-//                            e.printStackTrace();
-//                        }
-//
-//                    }
-//
-//                    @Override
-//                    public void failure(RetrofitError error) {
-//
-//                    }
-//                });
-
                 service.getDirection(fromstr, tostr, mode, getResources().getString(R.string.SERVER_API_KEY), false, "ru", true,new Callback<Response>() {
                     @Override
                     public void success(Response response, Response response2) {
@@ -287,7 +279,42 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
             }
         });
 
+        setListener(new OnChangedLocationListener() {
+            @Override
+            public void onChange() {
+                Toast.makeText(MainActivity.this,"onChange",Toast.LENGTH_SHORT).show();
+            }
+        });
+
     }
+
+
+    @Override
+    public void onStop() {
+        // If the client is connected
+        if (locationClient.isConnected()) {
+            stopPeriodicUpdates();
+        }
+        locationClient.disconnect();
+
+        super.onStop();
+    }
+
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        locationClient.connect();
+    }
+
+
+    private void stopPeriodicUpdates() {
+        locationClient.disconnect();
+    }
+
+
+
+
 
     public void onDrawRoutes(ArrayList<Step> steps){
         for (Step tempstep:steps){
@@ -399,7 +426,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     private  void showRoute(){
 
-        updater.sendEmptyMessageDelayed(0,0);
+        updater.sendEmptyMessageDelayed(0, 0);
 
 
 
@@ -581,4 +608,162 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
 
 
+    @Override
+    public void onConnected(Bundle bundle) {
+        Log.i(TAG, "Connected to location services");
+        currentLocation = getLocation();
+        if (listener!=null)
+            listener.onChange();
+
+        startPeriodicUpdates();
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.i(TAG, "GoogleApiClient connection has been suspend");
+    }
+
+    @Override
+    public void onLocationChanged(android.location.Location location) {
+        currentLocation = location;
+        if (lastLocation != null
+                && lastLocation.distanceTo(location)<5) {
+            // If the location hasn't changed by more than 5 meters, ignore it.
+            return;
+        }
+        lastLocation = location;
+        if (listener!=null)
+            listener.onChange();
+        LatLng myLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+        if (!hasSetUpInitialLocation) {
+            hasSetUpInitialLocation = true;
+        }
+
+
+    }
+
+
+    public android.location.Location getLastLocation() {
+        return lastLocation;
+    }
+
+    public android.location.Location getCurrentLocation() {
+        return currentLocation;
+    }
+
+
+    public OnChangedLocationListener getListener() {
+        return listener;
+    }
+
+    public void setListener(OnChangedLocationListener listener) {
+        this.listener = listener;
+    }
+
+    OnChangedLocationListener listener;
+
+
+
+    private void startPeriodicUpdates() {
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                locationClient, locationRequest, this);
+    }
+
+
+
+
+
+    private android.location.Location getLocation() {
+        // If Google Play Services is available
+        if (servicesConnected()) {
+            // Get the current location
+            return LocationServices.FusedLocationApi.getLastLocation(locationClient);
+        } else {
+            return null;
+        }
+    }
+
+
+    /*
+        * Verify that Google Play services is available before making a request.
+        *
+        * @return true if Google Play services is available, otherwise false
+    */
+    private boolean servicesConnected() {
+        // Check that Google Play services is available
+        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+
+        // If Google Play services is available
+        if (ConnectionResult.SUCCESS == resultCode) {
+            // In debug mode, log the status
+            Log.i(TAG, "Google play services available");
+
+            // Continue
+            return true;
+        } else {
+            Dialog dialog = GooglePlayServicesUtil.getErrorDialog(resultCode, this, 0);
+            if (dialog != null) {
+                ErrorDialogFragment errorFragment = new ErrorDialogFragment();
+                errorFragment.setDialog(dialog);
+                errorFragment.show(getFragmentManager(), TAG);
+            }
+            return false;
+        }
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        // Google Play services can resolve some errors it detects. If the error has a resolution, try
+        // sending an Intent to start a Google Play services activity that can resolve error.
+        if (connectionResult.hasResolution()) {
+            try {
+
+                // Start an Activity that tries to resolve the error
+                connectionResult.startResolutionForResult(this, CONNECTION_FAILURE_RESOLUTION_REQUEST);
+
+            } catch (IntentSender.SendIntentException e) {
+
+                // Thrown if Google Play services canceled the original PendingIntent
+                Log.i(TAG, "An error occurred when connecting to location services.", e);
+
+            }
+        } else {
+            // If no resolution is available, display a dialog to the user with the error.
+            showErrorDialog(connectionResult.getErrorCode());
+        }
+    }
+
+    private void showErrorDialog(int errorCode) {
+        Dialog errorDialog =
+                GooglePlayServicesUtil.getErrorDialog(errorCode, this,
+                        CONNECTION_FAILURE_RESOLUTION_REQUEST);
+
+        if (errorDialog != null) {
+            ErrorDialogFragment errorFragment = new ErrorDialogFragment();
+            errorFragment.setDialog(errorDialog);
+            errorFragment.show(getFragmentManager(), TAG);
+        }
+    }
+
+
+
+
+    public static class ErrorDialogFragment extends DialogFragment {
+        private Dialog mDialog;
+
+
+        public ErrorDialogFragment() {
+            super();
+            mDialog = null;
+        }
+
+        public void setDialog(Dialog dialog) {
+            mDialog = dialog;
+        }
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            return mDialog;
+        }
+    }
 }
