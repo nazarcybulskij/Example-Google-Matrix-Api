@@ -61,6 +61,7 @@ import nazar.cybulskij.testdirection.listener.OnChangedLocationListener;
 import nazar.cybulskij.testdirection.model.Location;
 import nazar.cybulskij.testdirection.model.Polyline;
 import nazar.cybulskij.testdirection.model.Step;
+import nazar.cybulskij.testdirection.model_entity.GeneralPoint;
 import nazar.cybulskij.testdirection.network.DirectionService;
 import nazar.cybulskij.testdirection.network.ServiceGenerator;
 import nazar.cybulskij.testdirection.util.DistanceUtil;
@@ -91,6 +92,8 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     TextToSpeech mTextToSprech;
 
     ArrayList<Step> stepslist = new ArrayList<Step>();
+
+    ArrayList<GeneralPoint>  listGeneralPoints;
 
     private static final LatLngBounds BOUNDS_GREATER_MOSCOW = new LatLngBounds(
             new LatLng(55.151244, 37.018423), new LatLng(56.551244, 38.318423));
@@ -229,6 +232,9 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                             JSONArray steps ;
                             Gson gson = new Gson();
                             ArrayList<ArrayList<Step>> allRoutes=new ArrayList<ArrayList<Step>>();
+                            listGeneralPoints =new ArrayList<GeneralPoint>();
+                            listGeneralPoints.clear();
+
 
                             for (int i =0;i<results.length();i++){
                                  route = results.optJSONObject(i);
@@ -251,11 +257,10 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
                             if (allRoutes.size()>0) {
                                 onDrawRoutes(allRoutes.get(0));
-                                //onDrawRoute(allRoutes.get(0).get(0));
-                                //onDrawRoute(allRoutes.get(0).get(1));
+                               generateGeneralPoint(allRoutes.get(0));
                             }
 
-                            showRoute();
+                            //showRoute();
 
 
                            // mJsonTextView.setText(json);
@@ -282,7 +287,46 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         setListener(new OnChangedLocationListener() {
             @Override
             public void onChange() {
+
                 Toast.makeText(MainActivity.this,"onChange",Toast.LENGTH_SHORT).show();
+
+
+
+                if (listGeneralPoints!=null){
+                    if(listGeneralPoints.size()>0){
+                        float mindistance=Float.MAX_VALUE;
+                        GeneralPoint minDistancePoint = null;
+
+                        for(GeneralPoint temp:listGeneralPoints){
+                            if (currentLocation.distanceTo(temp.getLocaton())<mindistance) {
+                                mindistance = currentLocation.distanceTo(temp.getLocaton());
+                                minDistancePoint = temp;
+                            }
+
+                        }
+
+                        if (minDistancePoint.getIsSelect()){
+                            return;
+                        }
+
+
+
+                        if (mindistance<200.0f){
+                            String spick = Html.fromHtml(minDistancePoint.getInstruction()).toString();
+                            mTextToSprech.speak(spick, TextToSpeech.QUEUE_FLUSH, null);
+                            minDistancePoint.setIsSpeack(true);
+                            if (mindistance<50.0f){
+                                minDistancePoint.setIsSelect(true);
+                            }
+
+                        }
+                    }
+
+                }
+
+
+
+
             }
         });
 
@@ -319,6 +363,17 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     public void onDrawRoutes(ArrayList<Step> steps){
         for (Step tempstep:steps){
                 onDrawRoute(tempstep);
+
+        }
+    }
+
+    public void generateGeneralPoint(ArrayList<Step> steps){
+        for (Step tempstep:steps){
+            android.location.Location  location = new android.location.Location("");
+            location.setLatitude(tempstep.getStart_location().getLat());
+            location.setLongitude(tempstep.getStart_location().getLng());
+            listGeneralPoints.add(new GeneralPoint(tempstep.getHtml_instructions(),location ));
+
 
         }
     }
@@ -425,11 +480,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     }
 
     private  void showRoute(){
-
         updater.sendEmptyMessageDelayed(0, 0);
-
-
-
         for (Step temp:stepslist){
             String  spick = "This code first acquires a reference to the text-field using its ID value, so alter this if you used a different value in your layout XML. Next, the code gets the text from the field and stores it as a string variable. If the user has not entered any text this will be empty. Depending on the logic within your application you may wish to add a conditional test, checking that the string is not null or zero in length, but this is not generally necessary.";
 //            if(temp.getTravel_mode().equals("TRANSIT")){
@@ -440,7 +491,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 //                showWalking(temp);
 //            }
             showDriver(temp);
-
         }
     }
 
