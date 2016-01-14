@@ -6,11 +6,8 @@ import android.content.IntentSender;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
-import android.os.Handler;
-import android.os.Message;
 import android.speech.tts.TextToSpeech;
 import android.support.v4.app.FragmentActivity;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Html;
 import android.util.Log;
@@ -22,7 +19,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
@@ -30,10 +26,7 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapView;
-import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -59,7 +52,6 @@ import java.util.TimerTask;
 import nazar.cybulskij.testdirection.adapter.AutoCompleteEventLocationAdapter;
 import nazar.cybulskij.testdirection.listener.OnChangedLocationListener;
 import nazar.cybulskij.testdirection.model.Location;
-import nazar.cybulskij.testdirection.model.Polyline;
 import nazar.cybulskij.testdirection.model.Step;
 import nazar.cybulskij.testdirection.model_entity.GeneralPoint;
 import nazar.cybulskij.testdirection.network.DirectionService;
@@ -70,8 +62,7 @@ import retrofit.RetrofitError;
 import retrofit.client.Response;
 import retrofit.mime.TypedByteArray;
 
-public class MainActivity extends FragmentActivity implements View.OnClickListener ,
-                                com.google.android.gms.location.LocationListener,
+public class MainActivity extends FragmentActivity implements com.google.android.gms.location.LocationListener,
                                 GoogleApiClient.ConnectionCallbacks,
                                 GoogleApiClient.OnConnectionFailedListener {
 
@@ -83,23 +74,13 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     Button mLoadDirections;
     SupportMapFragment mapFragment;
     GoogleMap map;
-    TextView mJsonTextView;
-
-    TextView mLine;
     DirectionService service;
     String mode = "driving";
-
     TextToSpeech mTextToSprech;
-
     ArrayList<Step> stepslist = new ArrayList<Step>();
-
     ArrayList<GeneralPoint>  listGeneralPoints;
-
     private static final LatLngBounds BOUNDS_GREATER_MOSCOW = new LatLngBounds(
             new LatLng(55.151244, 37.018423), new LatLng(56.551244, 38.318423));
-
-
-
     private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
     private LocationRequest locationRequest;
     private GoogleApiClient locationClient;
@@ -110,27 +91,10 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
             * UPDATE_INTERVAL_IN_SECONDS;
     private static final long FAST_INTERVAL_CEILING_IN_MILLISECONDS = MILLISECONDS_PER_SECOND
             * FAST_CEILING_IN_SECONDS;
-
     private android.location.Location lastLocation;
     private android.location.Location currentLocation;
-
     private boolean hasSetUpInitialLocation;
 
-
-    private Handler updater = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            if (stepPosition<stepslist.size()){
-                String spick = Html.fromHtml(stepslist.get(stepPosition).getHtml_instructions()).toString();
-                mTextToSprech.speak(spick,TextToSpeech.QUEUE_FLUSH, null);
-                stepPosition++;
-                updater.sendEmptyMessageDelayed(0,10000);
-            }
-
-        }
-    };
-
-    int   stepPosition = 0;
 
 
 
@@ -143,13 +107,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
         from = (AutoCompleteTextView) findViewById(R.id.from);
         to = (AutoCompleteTextView) findViewById(R.id.to);
-        mJsonTextView = (TextView)findViewById(R.id.json);
-        mLine = (TextView)findViewById(R.id.line);
-
-        findViewById(R.id.radio_driving).setOnClickListener(this);
-        findViewById(R.id.radio_walking).setOnClickListener(this);
-        findViewById(R.id.radio_bicycling).setOnClickListener(this);
-        findViewById(R.id.radio_transit).setOnClickListener(this);
 
         mTextToSprech = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
             @Override
@@ -158,13 +115,13 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                     Locale locale = new Locale("ru");
                     int result = mTextToSprech.setLanguage(locale);
                     if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                        Log.e("TTS", "Извините, этот язык не поддерживается");
+                        Log.e(TAG, "Извините, этот язык не поддерживается");
                     } else {
 
                     }
 
                 } else {
-                    Log.e("TTS", "Ошибка!");
+                    Log.e(TAG, "Ошибка!");
                 }
             }
         });
@@ -243,37 +200,20 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                                  steps = leg.optJSONArray("steps");
                                  String jsonOutput = steps.toString();
                                  stepslist = (ArrayList<Step>) gson.fromJson(jsonOutput, listType);
-//                                 for (Step tempstep:stepslist){
-//                                     mLine.setText(mLine.getText()+tempstep.getPolyline().getPoints()+"\n" );
-//
-//                                 }
-                                allRoutes.add(stepslist);
-
-//                                 printLine();
-//                                 mLine.setText(mLine.getText()+"/---------------------------------------------/"+"\n");
+                                 allRoutes.add(stepslist);
 
                             }
                             map.clear();
 
                             if (allRoutes.size()>0) {
                                 onDrawRoutes(allRoutes.get(0));
-                               generateGeneralPoint(allRoutes.get(0));
+                                generateGeneralPoint(allRoutes.get(0));
                             }
-
-                            //showRoute();
-
-
-                           // mJsonTextView.setText(json);
-
-
-
 
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
-
                     }
-
                     @Override
                     public void failure(RetrofitError error) {
 
@@ -287,30 +227,20 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         setListener(new OnChangedLocationListener() {
             @Override
             public void onChange() {
-
                 Toast.makeText(MainActivity.this,"onChange",Toast.LENGTH_SHORT).show();
-
-
-
                 if (listGeneralPoints!=null){
                     if(listGeneralPoints.size()>0){
                         float mindistance=Float.MAX_VALUE;
                         GeneralPoint minDistancePoint = null;
-
                         for(GeneralPoint temp:listGeneralPoints){
                             if (currentLocation.distanceTo(temp.getLocaton())<mindistance) {
                                 mindistance = currentLocation.distanceTo(temp.getLocaton());
                                 minDistancePoint = temp;
                             }
-
                         }
-
                         if (minDistancePoint.getIsSelect()){
                             return;
                         }
-
-
-
                         if (mindistance<200.0f){
                             String spick = Html.fromHtml(minDistancePoint.getInstruction()).toString();
                             mTextToSprech.speak(spick, TextToSpeech.QUEUE_FLUSH, null);
@@ -323,10 +253,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                     }
 
                 }
-
-
-
-
             }
         });
 
@@ -363,7 +289,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     public void onDrawRoutes(ArrayList<Step> steps){
         for (Step tempstep:steps){
                 onDrawRoute(tempstep);
-
         }
     }
 
@@ -380,27 +305,12 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     public void onDrawRoute(Step step){
         List<LatLng> mPoints = PolyUtil.decode(step.getPolyline().getPoints());
-
-
         PolylineOptions line;
-
-//        if (step.getTravel_mode().equals("WALKING")){
-//            line = new PolylineOptions()
-//                    .color(Color.RED)
-//                    .width(5)
-//                    .visible(true)
-//                    .zIndex(30);
-//
-//        }else{
              line = new PolylineOptions()
                     .color(Color.BLUE)
                     .width(5)
                     .visible(true)
                     .zIndex(30);
-
- //       }
-
-
         LatLngBounds.Builder latLngBuilder = new LatLngBounds.Builder();
         for (int i = 0; i < mPoints.size(); i++) {
 
@@ -425,7 +335,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
 
     public static String formatString(String text){
-
         StringBuilder json = new StringBuilder();
         String indentString = "";
 
@@ -457,123 +366,12 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     }
 
 
-    @Override
-    public void onClick(View v) {
-        int checkedId = v.getId();
-
-        switch (checkedId){
-            case R.id.radio_driving:
-                mode = "driving";
-                break;
-            case R.id.radio_walking:
-                mode = "walking";
-                break;
-            case R.id.radio_bicycling:
-                mode = "bicycling";
-                break;
-            case R.id.radio_transit:
-                mode = "transit";
-                break;
-        }
-       // mJsonTextView.setText("");
-
-    }
-
-    private  void showRoute(){
-        updater.sendEmptyMessageDelayed(0, 0);
-        for (Step temp:stepslist){
-            String  spick = "This code first acquires a reference to the text-field using its ID value, so alter this if you used a different value in your layout XML. Next, the code gets the text from the field and stores it as a string variable. If the user has not entered any text this will be empty. Depending on the logic within your application you may wish to add a conditional test, checking that the string is not null or zero in length, but this is not generally necessary.";
-//            if(temp.getTravel_mode().equals("TRANSIT")){
-//                showTransit(temp);
-//            }
-//
-//            if(temp.getTravel_mode().equals("WALKING")){
-//                showWalking(temp);
-//            }
-            showDriver(temp);
-        }
-    }
-
-    private  void showWalking(Step step){
-        Toast.makeText(getApplicationContext(),step.getDuration().getText()+":"+step.getDistance().getText()+"\n"+
-                Html.fromHtml(step.getHtml_instructions()),Toast.LENGTH_SHORT).show();
-    }
-    private  void showDriver(Step step){
-        Toast.makeText(getApplicationContext(), step.getDuration().getText() + ":" + step.getDistance().getText() +"\n"+
-                Html.fromHtml(step.getHtml_instructions()), Toast.LENGTH_SHORT).show();
-    }
-
-
-
-    private  void showTransit(Step step){
-        Toast.makeText(getApplicationContext(),step.getDuration().getText()+":"+step.getDistance().getText(),Toast.LENGTH_SHORT).show();
-    }
-
-
-
-
-
-
-    private  void printLine(){
-        for (Step temp:stepslist){
-            if(temp.getTravel_mode().equals("TRANSIT")){
-                printTransit(temp);
-            }
-
-            if(temp.getTravel_mode().equals("WALKING")){
-                printWalking(temp);
-            }
-
-            mLine.setText(mLine.getText()+"\n");
-        }
-    }
-
-    private  void printWalking(Step step){
-        mLine.setText(mLine.getText()+"\n" + "Start = "+getAdress(step.getStart_location()));
-        mLine.setText(mLine.getText()+"\n" + " Duration = "+step.getDuration().getText());
-        mLine.setText(mLine.getText()+"\n" + " Distance = "+step.getDistance().getText());
-        mLine.setText(mLine.getText()+"\n" + " Type = "+step.getTravel_mode().toLowerCase());
-        mLine.setText(mLine.getText() + "\n" + " End = " + getAdress(step.getEnd_location()));
-
-        Toast.makeText(getApplicationContext(),step.getDuration().getText()+":"+step.getDistance().getText(),Toast.LENGTH_SHORT).show();
-
-
-
-
-    }
-
-    private  void printTransit(Step step){
-
-        mLine.setText(mLine.getText()+"\n" + "Start = "+getAdress(step.getStart_location()));
-        mLine.setText(mLine.getText()+"\n" + " Duration = "+step.getDuration().getText());
-        mLine.setText(mLine.getText()+"\n" + " Distance = "+step.getDistance().getText());
-        mLine.setText(mLine.getText()+"\n" + " Type = "+step.getTravel_mode().toLowerCase());
-
-
-        mLine.setText(mLine.getText()+"\n" + " Start = "+step.getDetail().getDeparture_stop().getName());
-        mLine.setText(mLine.getText()+"\n" + " Маршрут = "+step.getDetail().getLine().getName()+" "+step.getDetail().getLine().getVehicle().getType());
-        mLine.setText(mLine.getText()+"\n" + "№  = "+step.getDetail().getLine().getShort_name());
-
-        mLine.setText(mLine.getText()+"\n" + " Зупинок = "+step.getDetail().getNum_stops());
-        mLine.setText(mLine.getText()+"\n" + " End = "+step.getDetail().getArrival_stop().getName());
-
-
-
-        mLine.setText(mLine.getText() + "\n" + " End = " + getAdress(step.getEnd_location()));
-
-
-
-    }
-
 
 
 
     private  String getAdress(Location location){
-
         Geocoder geocoder;
         geocoder = new Geocoder(this);
-
-
         List<Address> addresses = null;
         try {
             addresses = geocoder.getFromLocation(
@@ -583,7 +381,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         if (addresses!=null){
             if (addresses.size()!=0){
                 Address address = addresses.get(0);
@@ -597,54 +394,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     }
 
-    private void drawDashedPolyLine(GoogleMap mMap, List<LatLng> listOfPoints, int color) {
-    /* Boolean to control drawing alternate lines */
-        boolean added = false;
-        for (int i = 0; i < listOfPoints.size() - 1 ; i++) {
-        /* Get distance between current and next point */
-            double distance = getConvertedDistance(listOfPoints.get(i),listOfPoints.get(i + 1));
-
-        /* If distance is less than 0.002 kms */
-            if (distance < 0.002) {
-                if (!added) {
-                    mMap.addPolyline(new PolylineOptions()
-                            .add(listOfPoints.get(i))
-                            .add(listOfPoints.get(i + 1))
-                            .color(color));
-                    added = true;
-                } else {/* Skip this piece */
-                    added = false;
-                }
-            } else {
-            /* Get how many divisions to make of this line */
-                int countOfDivisions = (int) ((distance/0.002));
-
-            /* Get difference to add per lat/lng */
-                double latdiff = (listOfPoints.get(i+1).latitude - listOfPoints
-                        .get(i).latitude) / countOfDivisions;
-                double lngdiff = (listOfPoints.get(i + 1).longitude - listOfPoints
-                        .get(i).longitude) / countOfDivisions;
-
-            /* Last known indicates start point of polyline. Initialized to ith point */
-                LatLng lastKnowLatLng = new LatLng(listOfPoints.get(i).latitude, listOfPoints.get(i).longitude);
-                for (int j = 0; j < countOfDivisions; j++) {
-
-                /* Next point is point + diff */
-                    LatLng nextLatLng = new LatLng(lastKnowLatLng.latitude + latdiff, lastKnowLatLng.longitude + lngdiff);
-                    if (!added) {
-                        mMap.addPolyline(new PolylineOptions()
-                                .add(lastKnowLatLng)
-                                .add(nextLatLng)
-                                .color(color));
-                        added = true;
-                    } else {
-                        added = false;
-                    }
-                    lastKnowLatLng = nextLatLng;
-                }
-            }
-        }
-    }
 
     private double getConvertedDistance(LatLng latlng1, LatLng latlng2) {
         double distance = DistanceUtil.distance(latlng1.latitude,
