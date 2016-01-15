@@ -2,11 +2,14 @@ package nazar.cybulskij.testdirection;
 
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.app.FragmentManager;
 import android.content.IntentSender;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.speech.tts.TextToSpeech;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.text.Html;
@@ -50,12 +53,15 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import nazar.cybulskij.testdirection.adapter.AutoCompleteEventLocationAdapter;
+import nazar.cybulskij.testdirection.fragment.ShowDirectionFragment;
 import nazar.cybulskij.testdirection.listener.OnChangedLocationListener;
+import nazar.cybulskij.testdirection.model.Direction;
 import nazar.cybulskij.testdirection.model.Location;
 import nazar.cybulskij.testdirection.model.Step;
 import nazar.cybulskij.testdirection.model_entity.GeneralPoint;
 import nazar.cybulskij.testdirection.network.DirectionService;
 import nazar.cybulskij.testdirection.network.ServiceGenerator;
+import nazar.cybulskij.testdirection.util.DirectionUtil;
 import nazar.cybulskij.testdirection.util.DistanceUtil;
 import retrofit.Callback;
 import retrofit.RetrofitError;
@@ -95,7 +101,7 @@ public class MainActivity extends FragmentActivity implements com.google.android
     private android.location.Location currentLocation;
     private boolean hasSetUpInitialLocation;
 
-
+    ShowDirectionFragment fragment = null;
 
 
 
@@ -103,7 +109,21 @@ public class MainActivity extends FragmentActivity implements com.google.android
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        String languageToLoad = "en";
+        Locale locale = new Locale(languageToLoad);
+        Locale.setDefault(locale);
+        Configuration config = new Configuration();
+        config.locale = locale;
+        getBaseContext().getResources().updateConfiguration(config,
+                getBaseContext().getResources().getDisplayMetrics());
+
         setContentView(R.layout.activity_main);
+
+         Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
+         if (fragment instanceof ShowDirectionFragment){
+             this.fragment = (ShowDirectionFragment)fragment;
+         }
 
         from = (AutoCompleteTextView) findViewById(R.id.from);
         to = (AutoCompleteTextView) findViewById(R.id.to);
@@ -155,11 +175,6 @@ public class MainActivity extends FragmentActivity implements com.google.android
                 .addOnConnectionFailedListener(this)
                 .build();
 
-
-
-
-
-
         from.setAdapter(new AutoCompleteEventLocationAdapter(this, BOUNDS_GREATER_MOSCOW));
         to.setAdapter(new AutoCompleteEventLocationAdapter(this, BOUNDS_GREATER_MOSCOW));
         mLoadDirections = (Button)findViewById(R.id.load_directions);
@@ -170,7 +185,7 @@ public class MainActivity extends FragmentActivity implements com.google.android
             public void onClick(View v) {
                 String tostr =to.getText().toString();
                 String fromstr =from.getText().toString();
-                service.getDirection(fromstr, tostr, mode, getResources().getString(R.string.SERVER_API_KEY), false, "ru", true,new Callback<Response>() {
+                service.getDirection(fromstr, tostr, mode, getResources().getString(R.string.SERVER_API_KEY), false, "en", true,new Callback<Response>() {
                     @Override
                     public void success(Response response, Response response2) {
                         try {
@@ -179,9 +194,6 @@ public class MainActivity extends FragmentActivity implements com.google.android
                             String json = formatString(object.toString());
 
                             Type listType = new TypeToken<List<Step>>(){}.getType();
-
-
-
                             JSONArray results = object.optJSONArray("routes");
                             JSONObject route;
                             JSONArray legs;
@@ -239,16 +251,23 @@ public class MainActivity extends FragmentActivity implements com.google.android
                             }
                         }
                         if (minDistancePoint.getIsSelect()){
+                            hide();
                             return;
                         }
                         if (mindistance<200.0f){
+
                             String spick = Html.fromHtml(minDistancePoint.getInstruction()).toString();
-                            mTextToSprech.speak(spick, TextToSpeech.QUEUE_FLUSH, null);
+                            //mTextToSprech.speak(spick, TextToSpeech.QUEUE_FLUSH, null);
+
+                            show(spick, DirectionUtil.getDirectionfromString(spick));
+
                             minDistancePoint.setIsSpeack(true);
                             if (mindistance<50.0f){
                                 minDistancePoint.setIsSelect(true);
                             }
 
+                        }else{
+                            hide();
                         }
                     }
 
@@ -275,6 +294,7 @@ public class MainActivity extends FragmentActivity implements com.google.android
     public void onStart() {
         super.onStart();
         locationClient.connect();
+        hide();
     }
 
 
@@ -461,8 +481,6 @@ public class MainActivity extends FragmentActivity implements com.google.android
 
     OnChangedLocationListener listener;
 
-
-
     private void startPeriodicUpdates() {
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 locationClient, locationRequest, this);
@@ -481,6 +499,32 @@ public class MainActivity extends FragmentActivity implements com.google.android
             return null;
         }
     }
+
+      public  void show(String title ,Direction direction){
+          if (fragment!=null){
+              fragment.setDirection(title,direction);
+              android.support.v4.app.FragmentManager fm = getSupportFragmentManager();
+              fm.beginTransaction()
+                      .show(fragment)
+                      .commit();
+
+
+
+          }
+
+
+      }
+
+      public void hide(){
+          if (fragment!=null){
+              android.support.v4.app.FragmentManager fm = getSupportFragmentManager();
+              fm.beginTransaction()
+                      .hide(fragment)
+                      .commit();
+
+          }
+
+      }
 
 
     /*

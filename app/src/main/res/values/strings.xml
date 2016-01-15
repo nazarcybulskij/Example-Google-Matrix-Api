@@ -7,4 +7,5 @@
     <string name="SERVER_API_KEY">AIzaSyAGG489ixKF94tjBSb30f80uGuKBcciBqg</string>
     <string name="direction_url">https://maps.googleapis.com/maps/api/directions</string>
     <string name="direction_matrix_url">https://maps.googleapis.com/maps/api/distancematrix</string>
+    <string name="tag_direction_fragment">tagDirerctionfragment</string>
 </resources>
